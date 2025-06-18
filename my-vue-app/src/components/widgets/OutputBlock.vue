@@ -1,6 +1,8 @@
 <template>
   <div class="output-block p-4 border rounded bg-gray-50">
-    <h3 class="text-lg font-semibold mb-2">{{ title }}</h3>
+    <h3 class="text-lg font-semibold mb-2">
+      {{ title }}
+    </h3>
     <pre class="whitespace-pre-wrap break-all bg-gray-100 p-3 rounded text-sm overflow-auto max-h-96">{{ content }}</pre>
     <button
       @click="copyToClipboard"
@@ -9,7 +11,12 @@
     >
       {{ justCopied ? 'Copied!' : 'Copy to Clipboard' }}
     </button>
-    <p v-if="copyError" class="text-red-500 text-xs mt-1">{{ copyError }}</p>
+    <p
+      v-if="copyError"
+      class="text-red-500 text-xs mt-1"
+    >
+      {{ copyError }}
+    </p>
   </div>
 </template>
 

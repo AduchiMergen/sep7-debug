@@ -1,0 +1,21 @@
+name: Lint
+
+on:
+  pull_request:
+    branches: [ main ] # Or your default branch
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Specify a Node.js version
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./my-vue-app # Ensure this is the correct path to your package.json
+      - name: Run linter
+        run: yarn lint
+        working-directory: ./my-vue-app # Ensure this is the correct path to your package.json

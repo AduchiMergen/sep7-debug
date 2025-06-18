@@ -1,11 +1,16 @@
 <template>
   <div class="diagnostic-card border rounded-lg shadow mb-6 bg-white">
     <header class="bg-gray-100 px-4 py-3 border-b rounded-t-lg flex justify-between items-center">
-      <h2 class="text-xl font-semibold text-gray-700">{{ title }}</h2>
-      <span v-if="statusIcon" class="text-2xl">{{ statusIcon }}</span>
+      <h2 class="text-xl font-semibold text-gray-700">
+        {{ title }}
+      </h2>
+      <span
+        v-if="statusIcon"
+        class="text-2xl"
+      >{{ statusIcon }}</span>
     </header>
     <div class="p-4">
-      <slot></slot>
+      <slot />
     </div>
   </div>
 </template>
@@ -19,7 +24,7 @@ const props = defineProps<{
   status?: ParameterStatus | boolean | null; // Can be overall status for the card
 }>();
 
-const statusIcon = computed(() H {
+const statusIcon = computed(() => {
   if (typeof props.status === 'boolean') {
     return props.status ? '✅' : '❌';
   }
