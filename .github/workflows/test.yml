@@ -1,0 +1,24 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches: [ main ] # Or your default branch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./my-vue-app
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18' # Or the version your project uses
+        cache: 'yarn'
+        cache-dependency-path: my-vue-app/yarn.lock
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+    - name: Run tests
+      run: yarn test
