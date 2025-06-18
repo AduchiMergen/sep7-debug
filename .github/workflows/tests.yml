@@ -1,0 +1,62 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches: [ main ] # Or your default branch
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./my-vue-app
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Specify a Node.js version consistent with previous setups
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Vitest unit/integration tests
+        run: yarn test:unit
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./my-vue-app
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Cypress OS dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libnss3 libxss1 libasound2 libxtst6 xauth xvfb
+
+      - name: Run Cypress E2E tests
+        # Starts the server in the background, waits for it, runs tests, then shuts down server
+        # The `wait-on` package helps ensure the server is ready before tests run.
+        # It might be necessary to install wait-on globally or as a dev dependency if not available.
+        # For this subtask, I'll assume it can be installed with npx if not present.
+        run: |
+          yarn add -D wait-on # Install wait-on if not already a dev dependency
+          npx concurrently --kill-others --success first \
+            "yarn serve" \
+            "npx wait-on http://localhost:8080 && yarn test:e2e --config baseUrl=http://localhost:8080 --browser chrome"
+        env:
+          CYPRESS_CACHE_FOLDER: ~/.cache/Cypress # Recommended for CI to cache Cypress binary
+          # Set a higher timeout for wait-on, default is 2min, Vue CLI can be slow
+          WAIT_ON_TIMEOUT: 600000 # 10 minutes (in ms)
+          # Disable color codes for concurrently to make logs cleaner in GH Actions
+          FORCE_COLOR: 0
+          NPM_CONFIG_LOGLEVEL: warn # Reduce npm/yarn log verbosity for this step
+          NODE_ENV: development # Ensure dev server starts if it has specific env needs
+          BROWSER: none # Prevent vue-cli-service from opening browser
