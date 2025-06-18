@@ -1,11 +1,17 @@
 <template>
-  <div id="app" class="container mx-auto p-4">
+  <div
+    id="app"
+    class="container mx-auto p-4"
+  >
     <TheHeader />
 
     <main class="mt-8">
       <div v-if="!diagnosisResult">
         <UriInput @uri-pasted="handleUriPasted" />
-        <ExampleGallery @use-example="handleUseExample" class="mt-8" />
+        <ExampleGallery
+          @use-example="handleUseExample"
+          class="mt-8"
+        />
       </div>
       <div v-else>
         <DiagnosisReport :report-data="diagnosisResult" />
@@ -69,7 +75,7 @@ const resetDiagnosis = () => {
 };
 
 // FR5.3: Support for diagnosis via URL parameter
-onMounted((){
+onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);
   const uriFromQuery = urlParams.get('uri');
   if (uriFromQuery) {

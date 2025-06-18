@@ -14,36 +14,30 @@
       </button>
     </div>
     <div class="tab-content p-4">
-      <slot :name="tabs[activeTab]?.slotName || 'default'"></slot>
+      <slot :name="tabs[activeTab]?.slotName || 'default'" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, useSlots, computed } from 'vue';
+import { ref } from 'vue';
 
 interface Tab {
   title: string;
   slotName?: string; // Optional: if you want to name slots specifically
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{
   tabs: Tab[];
 }>();
 
 const activeTab = ref(0);
-const slots = useSlots();
 
-// This computed property helps determine which slot to render.
-// It's a basic way; more complex logic might be needed if slots are dynamic or have specific naming patterns.
-const currentSlotName = computed(() => {
-  const currentTab = props.tabs[activeTab.value];
-  if (currentTab && currentTab.slotName && slots[currentTab.slotName]) {
-    return currentTab.slotName;
-  }
-  // Fallback or default slot name if needed
-  return 'default'; // Or handle error/default content
-});
+// The slots object from useSlots() is not explicitly used in the script or template.
+// Vue's <slot> tag handles slot rendering automatically.
+// The slot to render is determined directly in the template like:
+// <slot :name="tabs[activeTab]?.slotName || 'default'" />
 
 </script>
 

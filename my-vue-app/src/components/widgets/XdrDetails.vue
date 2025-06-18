@@ -5,13 +5,22 @@
         <TransactionSummary :summary-data="xdrDetails?.summary" />
       </template>
       <template #txrep>
-        <OutputBlock title="TxRep (Conceptual)" :content="xdrDetails?.txrep" />
+        <OutputBlock
+          title="TxRep (Conceptual)"
+          :content="xdrDetails?.txrep"
+        />
       </template>
       <template #json>
-        <OutputBlock title="JSON Representation of XDR" :content="xdrDetails?.json" />
+        <OutputBlock
+          title="JSON Representation of XDR"
+          :content="xdrDetails?.json"
+        />
       </template>
       <template #base64>
-        <OutputBlock title="Base64 XDR" :content="xdrDetails?.base64" />
+        <OutputBlock
+          title="Base64 XDR"
+          :content="xdrDetails?.base64"
+        />
       </template>
     </TabbedViewer>
   </div>
@@ -23,6 +32,7 @@ import TransactionSummary from './TransactionSummary.vue';
 import OutputBlock from './OutputBlock.vue';
 import type { XdrDetailsData } from '../../composables/useSep7Diagnoser'; // Assuming type export
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{
   xdrDetails: XdrDetailsData | null | undefined;
 }>();

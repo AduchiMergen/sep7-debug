@@ -1,6 +1,8 @@
 <template>
   <div class="example-gallery p-4 border rounded shadow-sm bg-white">
-    <h2 class="text-xl font-semibold mb-3">Or Try an Example</h2>
+    <h2 class="text-xl font-semibold mb-3">
+      Or Try an Example
+    </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <ExampleCard
         v-for="example in examples"

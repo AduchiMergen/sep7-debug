@@ -1,11 +1,17 @@
 <template>
   <div class="params-table">
     <div v-if="!parameters || parameters.details.length === 0">
-      <p class="text-gray-500">No parameters found or analyzed.</p>
+      <p class="text-gray-500">
+        No parameters found or analyzed.
+      </p>
       return;
     </div>
     <ul class="space-y-4">
-      <li v-for="param in parameters.details" :key="param.name" class="p-3 border rounded-md bg-gray-50 hover:shadow-sm">
+      <li
+        v-for="param in parameters.details"
+        :key="param.name"
+        class="p-3 border rounded-md bg-gray-50 hover:shadow-sm"
+      >
         <div class="flex items-center mb-1">
           <span class="text-2xl mr-2">{{ param.status }}</span>
           <strong class="font-mono text-blue-600">{{ param.name }}</strong>
@@ -14,19 +20,26 @@
           <p class="text-sm text-gray-700 break-all">
             <span class="font-semibold">Value:</span> <code class="bg-gray-200 px-1 rounded">{{ param.value || '(empty)' }}</code>
           </p>
-          <p v-if="param.message" :class="['text-xs mt-1', getMessageClass(param.status)]">
+          <p
+            v-if="param.message"
+            :class="['text-xs mt-1', getMessageClass(param.status)]"
+          >
             {{ param.message }}
           </p>
 
           <!-- Embed XdrDetails for 'xdr' parameter -->
           <div v-if="param.name === 'xdr' && param.status === ParameterStatus.Valid && xdrData">
-            <h4 class="mt-3 mb-1 text-md font-semibold text-gray-700">XDR Details:</h4>
+            <h4 class="mt-3 mb-1 text-md font-semibold text-gray-700">
+              XDR Details:
+            </h4>
             <XdrDetails :xdr-details="xdrData" />
           </div>
 
           <!-- Embed ReplaceInfo for 'replace' parameter -->
           <div v-if="param.name === 'replace' && param.status === ParameterStatus.Valid && replaceData">
-             <h4 class="mt-3 mb-1 text-md font-semibold text-gray-700">Replace Instructions:</h4>
+            <h4 class="mt-3 mb-1 text-md font-semibold text-gray-700">
+              Replace Instructions:
+            </h4>
             <ReplaceInfo :replace-data="replaceData" />
           </div>
         </div>
@@ -36,7 +49,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { ParametersAnalysis, ParameterStatus as ParamStatusType, XdrDetailsData, ReplaceInstructionData } from '../../composables/useSep7Diagnoser';
 import XdrDetails from '../widgets/XdrDetails.vue';
 import ReplaceInfo from '../widgets/ReplaceInfo.vue';
@@ -44,6 +56,7 @@ import ReplaceInfo from '../widgets/ReplaceInfo.vue';
 // Re-exporting ParameterStatus for template usage
 const ParameterStatus = ParamStatusType;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{
   parameters: ParametersAnalysis | null | undefined;
   // Pass the full report data or specific parts needed for widgets
