@@ -12,7 +12,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # Specify a Node.js version
+          node-version: '20' # Specify a Node.js version
       - name: Install dependencies
         run: yarn install --frozen-lockfile
         working-directory: ./my-vue-app # Ensure this is the correct path to your package.json
