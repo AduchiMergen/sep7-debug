@@ -13,6 +13,9 @@ export const isValidAssetCode = (code: string): boolean => {
 
 export const isValidAmount = (amount: string): boolean => {
   // Basic check for positive number
+  if (amount.split('.').length > 2) {
+    return false; // More than one decimal point
+  }
   const num = parseFloat(amount);
   return !isNaN(num) && num > 0;
 };

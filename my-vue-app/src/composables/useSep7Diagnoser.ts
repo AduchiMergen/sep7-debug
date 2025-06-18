@@ -4,12 +4,12 @@ import { Transaction, Networks, StrKey, xdr as StellarXDR } from 'stellar-sdk';
 
 // --- Data Structures for the Diagnosis Report ---
 
-interface DiagnosticError {
+export interface DiagnosticError {
   message: string;
   // TODO: code?: string; // For specific error types
 }
 
-interface SyntaxAnalysis {
+export interface SyntaxAnalysis {
   isValid: boolean;
   scheme: string | null;
   operation: string | null;
@@ -17,7 +17,7 @@ interface SyntaxAnalysis {
   errors: DiagnosticError[];
 }
 
-enum ParameterStatus {
+export enum ParameterStatus {
   Valid = '✅',
   Invalid = '❌',
   Warning = '⚠️',
@@ -25,7 +25,7 @@ enum ParameterStatus {
   NotApplicable = 'N/A',
 }
 
-interface ParameterDetail {
+export interface ParameterDetail {
   name: string;
   value: string; // Raw value
   status: ParameterStatus;
@@ -34,14 +34,14 @@ interface ParameterDetail {
   parsedValue?: any; // Will hold structured data for XDR, replace etc.
 }
 
-interface ParametersAnalysis {
+export interface ParametersAnalysis {
   // Individual parameter checks
   details: ParameterDetail[];
   // TODO: Cross-parameter validation results
   // crossValidationErrors: DiagnosticError[];
 }
 
-interface SecurityAnalysis {
+export interface SecurityAnalysis {
   // Example fields, to be expanded
   originDomain?: {
     value: string | null;
@@ -59,7 +59,7 @@ interface SecurityAnalysis {
 }
 
 // Placeholder for XDR details (FR3)
-interface XdrDetailsData {
+export interface XdrDetailsData {
   raw: string;
   summary?: object; // Human-readable (FR3.2)
   txrep?: string;   // (FR3.3)
@@ -69,7 +69,7 @@ interface XdrDetailsData {
 }
 
 // Placeholder for Replace instruction details (FR4)
-interface ReplaceInstructionData {
+export interface ReplaceInstructionData {
   raw: string;
   // TODO: Structured representation of fields and hints (FR4.1)
   fields: Array<{ field: string; value: string; hint?: string }>;
@@ -146,9 +146,17 @@ export function useSep7Diagnoser() {
     }
   };
 
-  // --- Helper Functions (Implementations will be basic for now) ---
+  return {
+    diagnosisResult,
+    isLoading,
+    error,
+    diagnoseSep7Uri,
+  };
+}
 
-function performSyntaxAnalysis(uri: string): SyntaxAnalysis {
+// --- Helper Functions (Moved to top-level for export) ---
+
+export function performSyntaxAnalysis(uri: string): SyntaxAnalysis {
     const result: SyntaxAnalysis = {
       isValid: false,
       scheme: null,
@@ -182,14 +190,17 @@ function performSyntaxAnalysis(uri: string): SyntaxAnalysis {
         }
         // also handle cases like web+stellar:tx where pathname might be "tx" directly
 
+        // Always set the operation, even if it's an empty string (e.g. web+stellar:?foo=bar)
+        // The validity of the operation is checked below.
+        result.operation = operationPath;
+
         if (operationPath) {
-            result.operation = operationPath;
             // SEP-7 Standard operations
             const validOperations = ['tx', 'pay', 'sign', 'trust', 'add_network', 'remove_network'];
-            if (!validOperations.includes(result.operation)) {
+            if (!validOperations.includes(result.operation)) { // result.operation will be operationPath here
                  result.errors.push({ message: `Unsupported or invalid operation: '${result.operation}'.` });
             }
-        } else {
+        } else { // operationPath is empty or null (result.operation was already set to it)
             result.errors.push({ message: 'Missing operation (e.g., tx, pay) in URI path.' });
         }
       }
@@ -207,7 +218,7 @@ function performSyntaxAnalysis(uri: string): SyntaxAnalysis {
     return result;
 }
 
-function performParametersAnalysis(params: Record<string, string>, operation: string | null): ParametersAnalysis {
+export function performParametersAnalysis(params: Record<string, string>, operation: string | null): ParametersAnalysis {
     const details: ParameterDetail[] = [];
     const knownParams = new Set(Object.keys(params));
 
@@ -300,7 +311,7 @@ function performParametersAnalysis(params: Record<string, string>, operation: st
     return { details };
 }
 
-function performSecurityAnalysis(params: Record<string, string>, operation: string | null): SecurityAnalysis {
+export function performSecurityAnalysis(params: Record<string, string>, operation: string | null): SecurityAnalysis {
     const analysis: SecurityAnalysis = {
         summary: ParameterStatus.Info, // Default: Assume neutral until checks pass/fail
         messages: [],
@@ -338,26 +349,51 @@ function performSecurityAnalysis(params: Record<string, string>, operation: stri
         }
     } else {
         if (operation === 'tx') {
-            analysis.messages.push({ message: 'IMPORTANT: Signature is missing for a 'tx' operation. While optional by SEP-7 spec, it is highly recommended for security.' });
+            analysis.messages.push({ message: "IMPORTANT: Signature is missing for a 'tx' operation. While optional by SEP-7 spec, it is highly recommended for security." });
             if (analysis.summary !== ParameterStatus.Invalid) { analysis.summary = ParameterStatus.Warning; }
         }
     }
 
     // Determine overall summary
-    if (analysis.messages.some(m => m.message.startsWith('CRITICAL'))) {
-        analysis.summary = ParameterStatus.Invalid;
-    } else if (analysis.messages.some(m => m.message.startsWith('IMPORTANT'))) {
-        if (analysis.summary !== ParameterStatus.Invalid) { analysis.summary = ParameterStatus.Warning; }
-    } else if (analysis.originDomain?.isValid && signature) {
-        analysis.summary = ParameterStatus.Warning; // Warning because signature not fully validated
-    } else if (analysis.originDomain?.isValid) {
-        analysis.summary = ParameterStatus.Info; // Valid domain, no signature or not a TX
+    // Start with Info, can escalate to Warning, then to Invalid.
+    analysis.summary = ParameterStatus.Info; // Default if no other conditions met
+
+    const originDomainParamProvided = !!params['origin_domain'];
+    const signatureParamProvided = !!signature; // signature is params['signature']
+
+    if (originDomainParamProvided) {
+        if (analysis.originDomain?.isValid) { // Origin domain is present AND valid
+            if (signatureParamProvided) { // Valid domain, signature present (but not fully validated)
+                analysis.summary = ParameterStatus.Warning;
+            } else if (operation === 'tx') { // Valid domain, but signature MISSING for tx
+                analysis.summary = ParameterStatus.Warning;
+            }
+            // If valid domain, non-tx op, no signature -> stays Info (as initialized)
+        } else { // Origin domain was provided but is NOT valid (malformed)
+            // For malformed origin_domain, presence of signature or 'tx' op (which would ideally have a signature) is a Warning.
+            if (signatureParamProvided) { // Malformed domain, but signature is there
+                analysis.summary = ParameterStatus.Warning;
+            } else if (operation === 'tx') { // Malformed domain, and signature missing for tx
+                analysis.summary = ParameterStatus.Warning;
+            }
+            // Malformed domain, non-tx op, no signature -> stays Info (as initialized)
+        }
     }
+
+    // Critical override: if origin_domain was entirely missing (CRITICAL message already added).
+    if (!originDomainParamProvided) {
+        analysis.summary = ParameterStatus.Invalid;
+    }
+    // If an IMPORTANT message about missing signature for TX was added, and we are not already Invalid:
+    // This condition is implicitly handled now by the logic above:
+    // - if origin_domain was valid & tx & no sig -> Warning
+    // - if origin_domain was malformed & tx & no sig -> Warning
+    // The "IMPORTANT" message itself is added earlier.
 
     return analysis;
 }
 
-function processXdr(xdrB64: string, networkPassphrase?: string): XdrDetailsData {
+export function processXdr(xdrB64: string, networkPassphrase?: string): XdrDetailsData {
     const result: XdrDetailsData = {
         raw: xdrB64,
         base64: xdrB64, // Keep original base64 for FR3.5
@@ -366,14 +402,10 @@ function processXdr(xdrB64: string, networkPassphrase?: string): XdrDetailsData 
         json: '',
     };
 
-    try {
-        atob(xdrB64); // Check if it's valid base64
-    } catch (e) {
-        result.summary = { error: 'Invalid Base64 for XDR.' };
-        result.txrep = 'Invalid Base64 for XDR.';
-        result.json = 'Invalid Base64 for XDR.';
-        return result;
-    }
+    // The new Transaction() call will also fail if xdrB64 is not valid Base64.
+    // So, the explicit atob check might be redundant and could be the source of the issue
+    // if the environment's atob is behaving unexpectedly.
+    // We'll rely on new Transaction() to validate both Base64 and XDR structure.
 
     const currentNetworkPassphrase = networkPassphrase || Networks.PUBLIC; // Default to public network if not specified
 
@@ -385,7 +417,9 @@ function processXdr(xdrB64: string, networkPassphrase?: string): XdrDetailsData 
             let details = `Operation ${index + 1}: ${op.type}`;
             // Basic details for common operations
             if (op.type === 'payment') {
-                details += ` | Dest: ${op.destination} | Asset: ${op.asset.getCode() === 'native' ? 'XLM' : op.asset.getCode() + ':' + op.asset.getIssuer()} | Amount: ${op.amount}`;
+                details += ` | Dest: ${op.destination} | Asset: ${op.asset.getCode() === 'native' ? 'XLM' : op.asset.getCode() + (op.asset.getIssuer() ? ':' + op.asset.getIssuer() : '')} | Amount: ${op.amount}`;
+            } else if (op.type === 'createAccount') {
+                details += ` | Dest: ${op.destination} | StartingBalance: ${op.startingBalance}`;
             } else if (op.type === 'pathPaymentStrictReceive' || op.type === 'pathPaymentStrictSend') {
                 details += ` | Dest: ${op.destination} | SendMax: ${op.sendMax} ${op.sendAsset.getCode()} | DestAmount: ${op.destAmount} ${op.destAsset.getCode()}`;
             } else if (op.type === 'manageSellOffer' || op.type === 'manageBuyOffer') {
@@ -400,8 +434,8 @@ function processXdr(xdrB64: string, networkPassphrase?: string): XdrDetailsData 
         result.summary = {
             source: tx.source,
             fee: tx.fee,
-            sequence: tx.sequence.toString(), // sequence is a BigNumber, convert to string
-            memo: tx.memo && tx.memo.value ? tx.memo.toString() : 'None',
+            sequence: tx.sequence.toString(),
+            memo: tx.memo && tx.memo.value ? tx.memo.toString() : (tx.memo && tx.memo.type === 'none' ? 'None' : String(tx.memo)), // Handle MemoNone explicitly
             operationCount: tx.operations.length,
             operations: operations,
             network: currentNetworkPassphrase === Networks.PUBLIC ? 'Public' : (currentNetworkPassphrase === Networks.TESTNET ? 'Testnet' : 'Custom'),
@@ -429,7 +463,7 @@ function processXdr(xdrB64: string, networkPassphrase?: string): XdrDetailsData 
     return result;
 }
 
-function processReplaceInstructions(replaceStr: string): ReplaceInstructionData {
+export function processReplaceInstructions(replaceStr: string): ReplaceInstructionData {
     const result: ReplaceInstructionData = {
         raw: replaceStr,
         fields: [],
@@ -487,12 +521,4 @@ function processReplaceInstructions(replaceStr: string): ReplaceInstructionData 
     }
 
     return result;
-}
-
-  return {
-    diagnosisResult,
-    isLoading,
-    error,
-    diagnoseSep7Uri,
-  };
 }
